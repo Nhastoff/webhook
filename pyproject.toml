@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "testkeycloak"
+version = "0.1.0"
+description = ""
+authors = ["ntishkin <ntishkin@migcredit.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+django = "4.2"
+python-keycloak = "^3.7.0"
+djangorestframework = "^3.14.0"
+djangorestframework-simplejwt = "^5.3.1"
+psycopg2-binary = "^2.9.9"
+celery = "^5.3.6"
+redis = "^5.0.1"
+flower = "^2.0.1"
+ruff = "^0.1.13"
+django-celery-beat = "^2.5.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
