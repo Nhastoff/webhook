@@ -10,28 +10,13 @@ services:
     depends_on:
       - postgres
     environment:
-      - DJANGO_SETTINGS_MODULE=testkeycloak.settings
-      - DATABASE_URL=postgres://keycloak:password@postgres:5432/keycloak
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}
+      - DATABASE_URL=${DATABASE_URL}
 
   redis:
     image: redis:alpine
     ports:
       - "6379:6379"
-
-  keycloak:
-    image: jboss/keycloak
-    environment:
-      - KEYCLOAK_USER=admin
-      - KEYCLOAK_PASSWORD=admin
-      - DB_VENDOR=POSTGRES
-      - DB_ADDR=postgres
-      - DB_DATABASE=keycloak
-      - DB_USER=keycloak
-      - DB_PASSWORD=password
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
 
   celery:
     build: .
@@ -46,9 +31,9 @@ services:
   postgres:
     image: postgres
     environment:
-      - POSTGRES_DB=keycloak
-      - POSTGRES_USER=keycloak
-      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:

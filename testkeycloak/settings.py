@@ -9,10 +9,11 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-
 from pathlib import Path
 
 from celery.schedules import crontab
+
+from testkeycloak.secrets import settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -86,21 +87,25 @@ WSGI_APPLICATION = "testkeycloak.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'keycloak',
-        'USER': 'keycloak',
-        'PASSWORD': 'password',
-        'HOST': 'postgres',
+        'NAME': settings.DB_NAME,
+        'USER': settings.DB_USER,
+        'PASSWORD': settings.DB_PASSWORD,
+        'HOST': settings.DB_HOST,
         'PORT': '5432',
     }
+}
+
+DATABASES['default']['TEST'] = {
+    'NAME': 'test_mytestdatabase',
 }
 
 
 LOGIN_REDIRECT_URL = '/admin/'
 LOGIN_URL = 'keycloak_login'
-KEYCLOAK_SERVER_URL = 'http://localhost:8080/auth/'
-KEYCLOAK_REALM = 'master'
-KEYCLOAK_CLIENT_ID = 'django-client'
-KEYCLOAK_CLIENT_SECRET = 'MIICqTCCAZECBgGM+BoXyTANBgkqhkiG9w0BAQsFADAYMRYwFAYDVQQDDA1kamFuZ28tY2xpZW50MB4XDTI0MDExMTEwMzY0OFoXDTM0MDExMTEwMzgyOFowGDEWMBQGA1UEAwwNZGphbmdvLWNsaWVudDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMStJ30tGHOqY+72gk8cauS1RpIMHUU7qi2Bi5sLLoiRswGjKStctmg9Q15fswaBk0hVATvral3XbAc/2i7dRqNcC9mhVAi1lZKxjR1Fku8eUIMgDyKDmsARJcTexRxjMRno8AodhOmC3Yp0LpFucuwiUTEcoAzOaSEdfd+zEiVGftzviidzVsoorCm9YTLt7ehjZYPTKfoSP1xaUB9eWHU5pAcM+5j4XYpQPsC6kqm5Oq6m0ex2EGrdqj2TqJMdj4EdWyfYvayPRp7aKHvizoVK4HUSVG82QN3w/xlRPWhDuxEQf4qOJTlyE7bvC1Ywf4dJpt/4dr+GGEfXvaM+a0UCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEAgc8G8/ByLfggw9VIzhiaasVG2gVZDgGlPka9mM1n86H6n8SqEXwZ48rmBCz2ljH+0QaIZAyVIueZ+rWwXj0fH7AB5DO4zuq6/EWeHfLSzpLTV8zuAo3aG/p6a7mhxiv6CnfbFAynCEdnufi0IlUKgD9UJ7G/dkRZRwAr1syAAvFEtu7iVfO5WyX0G8oRsVIiSyHVlNiP9MrqxIG2ZFBm/OTtUZzSfIPTEkAbYZSpEJUzyB3D6ccd+ssjaeYecBTShWzWPDfBLhD5/keouIMQoNirtLFTBokJqD98oYIuMTehYjpt2RGnqOLxfRRJFdkppWWZ0dzs/3G2cBYaaeCEiQ=='
+KEYCLOAK_SERVER_URL = settings.DJANGO_KEYCLOAK_INTERNAL_URL
+KEYCLOAK_REALM = 'alfadev'
+KEYCLOAK_CLIENT_ID = 'local_django'
+KEYCLOAK_CLIENT_SECRET = settings.KEYCLOAK_CLIENT_SECRET
 KEYCLOAK_PROTOCOL = 'openid-connect'
 
 CELERY_BROKER_URL = 'redis://redis:6379/0'
@@ -135,7 +140,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 

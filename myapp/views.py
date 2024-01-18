@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import User
-from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
 from django.urls import reverse
 from keycloak import KeycloakOpenID
@@ -10,6 +9,7 @@ from rest_framework.generics import ListAPIView, RetrieveDestroyAPIView
 from rest_framework.response import Response
 
 from .models import Webhook
+from .schemas import UserInfo
 from .serializers import WebhookSerializer
 from .tasks import send_data_task
 
@@ -63,44 +63,39 @@ class TaskResultView(views.APIView):
 def keycloak_login(request):
     redirect_uri = request.build_absolute_uri(reverse('keycloak_login'))
     code = request.GET.get('code')
+    keycloak_openid = KeycloakOpenID(server_url=settings.KEYCLOAK_SERVER_URL,
+                                     client_id=settings.KEYCLOAK_CLIENT_ID,
+                                     realm_name=settings.KEYCLOAK_REALM,
+                                     client_secret_key=settings.KEYCLOAK_CLIENT_SECRET)
     if code:
-        keycloak_openid = KeycloakOpenID(server_url=settings.KEYCLOAK_SERVER_URL,
-                                         client_id=settings.KEYCLOAK_CLIENT_ID,
-                                         realm_name=settings.KEYCLOAK_REALM,
-                                         client_secret_key=settings.KEYCLOAK_CLIENT_SECRET)
+        try:
+            token_response = keycloak_openid.token(grant_type='authorization_code', code=code,
+                                                   redirect_uri=redirect_uri)
 
-        token_response = keycloak_openid.token(grant_type='authorization_code', code=code,
-                                               redirect_uri=request.build_absolute_uri(reverse('keycloak_login')))
+            userinfo = UserInfo(**keycloak_openid.userinfo(token_response['access_token']))
 
-        userinfo = keycloak_openid.userinfo(token_response['access_token'])
+            username = userinfo.preferred_username
+            email = userinfo.email
+            first_name = userinfo.given_name
+            last_name = userinfo.family_name
+            user, created = User.objects.get_or_create(username=username)
 
-        username = userinfo.get('preferred_username')
-        email = userinfo.get('email')
-        full_name = userinfo.get('name')
-        user, created = User.objects.get_or_create(username=username)
+            if created or user.email != email or user.first_name != first_name or user.last_name != last_name:
+                user.email = email
+                user.first_name = first_name
+                user.last_name = last_name
 
-        if created or user.email != email or user.full_name != full_name:
-            user.email = email
-            user.full_name = full_name
+            keycloak_roles = userinfo.groups or []
+            user.is_superuser = 'superuser' in keycloak_roles
+            user.is_staff = 'staff' in keycloak_roles or user.is_superuser
             user.save()
 
-        keycloak_roles = userinfo.get('roles', [])
-        user.is_superuser = 'superuser' in keycloak_roles
-        user.is_staff = 'staff' in keycloak_roles or user.is_superuser
-        user.save()
+            user, _ = User.objects.get_or_create(username=username)
 
-        login(request, user)
+            login(request, user)
 
-        return redirect('/admin/')
-    keycloak_login_url = f'{settings.KEYCLOAK_SERVER_URL}realms/{settings.KEYCLOAK_REALM}/protocol/openid-connect/auth?client_id={settings.KEYCLOAK_CLIENT_ID}&response_type=code&redirect_uri={redirect_uri}'
+            return redirect('/admin/')
+        except Exception as e:
+            print(f"Error during Keycloak authentication: {e}")
+    keycloak_login_url = keycloak_openid.auth_url(redirect_uri=redirect_uri, scope="openid profile roles")
     return redirect(keycloak_login_url)
-
-
-def admin_login_redirect(request):
-    if request.user.is_authenticated:
-        if request.user.is_superuser or request.user.is_staff:
-            return redirect(reverse('admin:index'))
-        else:
-            raise status.HTTP_403_FORBIDDEN("У вас нет доступа к этой странице.")
-    else:
-        return redirect('URL для логина через Keycloak')

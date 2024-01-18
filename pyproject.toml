@@ -3,7 +3,6 @@ name = "testkeycloak"
 version = "0.1.0"
 description = ""
 authors = ["ntishkin <ntishkin@migcredit.ru>"]
-readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -17,6 +16,11 @@ redis = "^5.0.1"
 flower = "^2.0.1"
 ruff = "^0.1.13"
 django-celery-beat = "^2.5.0"
+pydantic = {extras = ["dotenv"], version = "^2.5.3"}
+python-dotenv = "^1.0.0"
+pytest = "^7.4.4"
+pytest-django = "^4.7.0"
+django-factory-boy = "^1.0.0"
 
 
 [build-system]
