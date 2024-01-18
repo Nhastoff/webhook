@@ -149,7 +149,7 @@ def test_send_data_task_retry():
     with (
         patch('myapp.tasks.random.randint', return_value=10),
         patch('myapp.tasks.send_data_task.retry') as mock_retry,
-        patch('myapp.tasks.time.sleep') as mock_sleep
+        patch('myapp.tasks.time.sleep')
     ):
         try:
             send_data_task(data={'key': 'value'})
@@ -163,7 +163,7 @@ def test_send_data_task_max_retries_exceeded():
     with (
         patch('myapp.tasks.random.randint', return_value=5),
         patch('myapp.tasks.send_data_task.retry', side_effect=MaxRetriesExceededError),
-        patch('myapp.tasks.time.sleep') as mock_sleep
+        patch('myapp.tasks.time.sleep')
     ):
         result = send_data_task(data={'key': 'value'})
         assert result == {"error": "Максимальное количество попыток превышено"}
