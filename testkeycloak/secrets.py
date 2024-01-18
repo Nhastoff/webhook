@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     DB_PASSWORD: str
     DJANGO_KEYCLOAK_INTERNAL_URL: str
     KEYCLOAK_CLIENT_SECRET: str
+    SECRET_KEY: str
 
     class Config:
         env_file = ".env"
