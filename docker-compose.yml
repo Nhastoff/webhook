@@ -18,6 +18,21 @@ services:
     ports:
       - "6379:6379"
 
+  keycloak:
+    image: jboss/keycloak
+    environment:
+      - KEYCLOAK_USER=${KEYCLOAK_USER}
+      - KEYCLOAK_PASSWORD=${KEYCLOAK_PASSWORD}
+      - DB_VENDOR=${DB_VENDOR}
+      - DB_ADDR=${DB_ADDR}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
   celery:
     build: .
     command: sh -c "celery -A testkeycloak worker --loglevel=info & celery -A testkeycloak flower --broker=redis://redis:6379/0 --port=5555"

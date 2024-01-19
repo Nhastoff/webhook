@@ -2,11 +2,11 @@ from pydantic import BaseModel
 
 
 class UserInfo(BaseModel):
-    sub: str
-    email_verified: bool
-    name: str
-    groups: list[str]
-    preferred_username: str
-    given_name: str
-    family_name: str
-    email: str
+    sub: str | None = None
+    email_verified: bool | None = None
+    name: str | None = None
+    group: list[str] | None = None
+    preferred_username: str | None = None
+    given_name: str | None = None
+    family_name: str | None = None
+    email: str | None = None

@@ -17,10 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-from myapp.views import keycloak_login
+from myapp.views import KeycloakLoginView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('keycloak/login/', keycloak_login, name='keycloak_login'),
+    path('keycloak/login/', KeycloakLoginView.as_view(), name='keycloak_login'),
     path('', include("myapp.urls")),
 ]

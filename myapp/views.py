@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.contrib.auth import login
 from django.contrib.auth.models import User
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.views import View
 from keycloak import KeycloakOpenID
 from rest_framework import status, permissions
 from rest_framework.generics import ListAPIView, RetrieveDestroyAPIView
@@ -61,48 +63,60 @@ class TaskResultView(APIView):
         return Response({'status': 'pending'}, status=status.HTTP_202_ACCEPTED)
 
 
-def get_or_create_user(user_info: dict) -> dict:
-    userinfo = UserInfo(**user_info)
+class KeycloakLoginView(View):
 
-    username = userinfo.preferred_username
-    email = userinfo.email
-    first_name = userinfo.given_name
-    last_name = userinfo.family_name
-    user, created = User.objects.get_or_create(username=username)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.keycloak_openid = KeycloakOpenID(
+            server_url=settings.KEYCLOAK_SERVER_URL,
+            client_id=settings.KEYCLOAK_CLIENT_ID,
+            realm_name=settings.KEYCLOAK_REALM,
+            client_secret_key=settings.KEYCLOAK_CLIENT_SECRET
+        )
 
-    if created or user.email != email or user.first_name != first_name or user.last_name != last_name:
-        user.email = email
-        user.first_name = first_name
-        user.last_name = last_name
+    def get(self, request, *args, **kwargs):
+        redirect_uri = request.build_absolute_uri(reverse('keycloak_login'))
+        code = request.GET.get('code')
 
-    keycloak_roles = userinfo.groups or []
-    user.is_superuser = 'superuser' in keycloak_roles
-    user.is_staff = 'staff' in keycloak_roles or user.is_superuser
-    user.save()
+        if code:
+            try:
+                token_response = self.keycloak_openid.token(
+                    grant_type='authorization_code',
+                    code=code,
+                    redirect_uri=redirect_uri
+                )
 
-    user, _ = User.objects.get_or_create(username=username)
+                user = self._get_or_create_user(self.keycloak_openid.userinfo(token_response['access_token']))
 
-    return user
+                login(request, user)
 
+                return redirect('/admin/')
+            except Exception as e:
+                print(f"Error during Keycloak authentication: {e}")
+                return HttpResponse("Authentication failed", status=401)
 
-def keycloak_login(request):
-    redirect_uri = request.build_absolute_uri(reverse('keycloak_login'))
-    code = request.GET.get('code')
-    keycloak_openid = KeycloakOpenID(server_url=settings.KEYCLOAK_SERVER_URL,
-                                     client_id=settings.KEYCLOAK_CLIENT_ID,
-                                     realm_name=settings.KEYCLOAK_REALM,
-                                     client_secret_key=settings.KEYCLOAK_CLIENT_SECRET)
-    if code:
-        try:
-            token_response = keycloak_openid.token(grant_type='authorization_code', code=code,
-                                                   redirect_uri=redirect_uri)
+        keycloak_login_url = self.keycloak_openid.auth_url(redirect_uri=redirect_uri, scope="openid profile roles")
+        return redirect(keycloak_login_url)
 
-            user = get_or_create_user(keycloak_openid.userinfo(token_response['access_token']))
+    def _get_or_create_user(self, user_info: dict) -> dict:
+        userinfo = UserInfo(**user_info)
 
-            login(request, user)
+        username = userinfo.preferred_username
+        email = userinfo.email
+        first_name = userinfo.given_name
+        last_name = userinfo.family_name
+        user, created = User.objects.get_or_create(username=username)
 
-            return redirect('/admin/')
-        except Exception as e:
-            print(f"Error during Keycloak authentication: {e}")
-    keycloak_login_url = keycloak_openid.auth_url(redirect_uri=redirect_uri, scope="openid profile roles")
-    return redirect(keycloak_login_url)
+        if created or user.email != email or user.first_name != first_name or user.last_name != last_name:
+            user.email = email
+            user.first_name = first_name
+            user.last_name = last_name
+
+        keycloak_roles = userinfo.group or []
+        user.is_superuser = '/superuser' in keycloak_roles
+        user.is_staff = '/staff' in keycloak_roles or user.is_superuser
+        user.save()
+
+        user, _ = User.objects.get_or_create(username=username)
+
+        return user

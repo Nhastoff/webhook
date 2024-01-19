@@ -103,8 +103,8 @@ DATABASES['default']['TEST'] = {
 LOGIN_REDIRECT_URL = '/admin/'
 LOGIN_URL = 'keycloak_login'
 KEYCLOAK_SERVER_URL = settings.DJANGO_KEYCLOAK_INTERNAL_URL
-KEYCLOAK_REALM = 'alfadev'
-KEYCLOAK_CLIENT_ID = 'local_django'
+KEYCLOAK_REALM = 'master'
+KEYCLOAK_CLIENT_ID = 'django-client'
 KEYCLOAK_CLIENT_SECRET = settings.KEYCLOAK_CLIENT_SECRET
 KEYCLOAK_PROTOCOL = 'openid-connect'
 
