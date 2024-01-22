@@ -38,9 +38,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
     "rest_framework",
-    'myapp',
     "django_celery_beat",
+
+    'myapp',
 ]
 
 REST_FRAMEWORK = {

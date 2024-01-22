@@ -1,7 +1,7 @@
 {% extends "admin/index.html" %}
 
 {% block userlinks %}
-    <a href="http://keycloak:8080/auth/admin/" class="keycloak-login-btn">
+    <a href="http://keycloak:8080/auth/realms/master/account/" class="keycloak-login-btn">
         Keycloak account
     </a>
     {{ block.super }}

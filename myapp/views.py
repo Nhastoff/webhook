@@ -6,30 +6,28 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.views import View
 from keycloak import KeycloakOpenID
-from rest_framework import status, permissions
+from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Webhook
+from .permission import PermIsAuthenticated
 from .schemas import UserInfo
 from .serializers import WebhookSerializer
 from .tasks import send_data_task
 
 
-class WebhookCreateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+class WebhookCreateView(PermIsAuthenticated, APIView):
 
     def post(self, request):
         serializer = WebhookSerializer(data=request.data)
-        if serializer.is_valid():
+        if serializer.is_valid(raise_exception=True):
             serializer.save(user=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class WebhookWriteView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+class WebhookWriteView(PermIsAuthenticated, APIView):
 
     def post(self, request, webhook_id):
         try:
@@ -41,20 +39,17 @@ class WebhookWriteView(APIView):
         return Response({'task_id': task.id}, status=status.HTTP_202_ACCEPTED)
 
 
-class WebhookViewSet(ListAPIView):
+class WebhookViewSet(PermIsAuthenticated, ListAPIView):
     queryset = Webhook.objects.all()
     serializer_class = WebhookSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
 
-class WebhookDetailView(RetrieveDestroyAPIView):
+class WebhookDetailView(PermIsAuthenticated, RetrieveDestroyAPIView):
     queryset = Webhook.objects.all()
     serializer_class = WebhookSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
 
-class TaskResultView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+class TaskResultView(PermIsAuthenticated, APIView):
 
     def get(self, request, task_id):
         result = send_data_task.AsyncResult(task_id)
@@ -92,13 +87,13 @@ class KeycloakLoginView(View):
 
                 return redirect('/admin/')
             except Exception as e:
-                print(f"Error during Keycloak authentication: {e}")
                 return HttpResponse("Authentication failed", status=401)
 
         keycloak_login_url = self.keycloak_openid.auth_url(redirect_uri=redirect_uri, scope="openid profile roles")
         return redirect(keycloak_login_url)
 
     def _get_or_create_user(self, user_info: dict) -> dict:
+        changes_user = False
         userinfo = UserInfo(**user_info)
 
         username = userinfo.preferred_username
@@ -111,12 +106,19 @@ class KeycloakLoginView(View):
             user.email = email
             user.first_name = first_name
             user.last_name = last_name
+            changes_user = True
 
         keycloak_roles = userinfo.group or []
-        user.is_superuser = '/superuser' in keycloak_roles
-        user.is_staff = '/staff' in keycloak_roles or user.is_superuser
-        user.save()
+        if ('/superuser' in keycloak_roles != user.is_superuser) or (
+                '/staff' in keycloak_roles != user.is_staff
+        ) or (user.is_superuser != user.is_staff):
+            user.is_superuser = '/superuser' in keycloak_roles
+            user.is_staff = '/staff' in keycloak_roles or user.is_superuser
+            changes_user = True
 
-        user, _ = User.objects.get_or_create(username=username)
+        if changes_user:
+            user.save()
+
+        user.refresh_from_db()
 
         return user
